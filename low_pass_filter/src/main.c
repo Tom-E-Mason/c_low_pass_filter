@@ -6,12 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define WINDOW_TYPE_KAISSER "kaisser"         // ------------
-#define WINDOW_TYPE_HAMMING "hamming"         // 
-#define WINDOW_TYPE_HANNING "hanning"         // window type
-#define WINDOW_TYPE_BLACKMAN "blackman"       // id codes
-#define WINDOW_TYPE_BARTLETT "bartlett"       // 
-#define WINDOW_TYPE_RECTANGULAR "rectangular" // ------------
+#include "low_pass_filter.h"
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
@@ -30,7 +25,7 @@ void print_usage(const char* prog_name);
 void print_manual_page(const char* prog_name);
 bool is_wav_file(const char* file_name);
 float get_cutoff(const char* file_name);
-const char* get_window_type(const char* window_type);
+enum window_t get_window_type(const char* window_type);
 
 int main(int argc, const char** argv)
 {
@@ -60,14 +55,15 @@ int main(int argc, const char** argv)
         return OUTPUT_FILE_FORMAT_ERROR;
     }
 
-    float cutoff = get_cutoff(argv[3]);
+    const float cutoff = get_cutoff(argv[3]);
     if (!cutoff)
     {
-        eprintf("cutoff frequency must be a positive numerical value between 20Hz and 20000Hz.\n");
+        eprintf("cutoff frequency must be a positive numerical value between "
+                "20Hz and 20000Hz.\n");
         return CUTOFF_VALUE_ERROR;
     }
     
-    char* window_type = WINDOW_TYPE_KAISSER;
+    enum window_t window_type = KAISSER;
     if (argc == 6)
     {
         if (strcmp(argv[4], "-w"))
@@ -77,12 +73,31 @@ int main(int argc, const char** argv)
         }
 
         window_type = get_window_type(argv[5]);
-        if (!window_type)
+        if (window_type == NULL_WINDOW)
         {
             eprintf("unknown window type %s.\n", argv[5]);
             return UNKNOWN_WINDOW_ERROR;
         }
     }
+
+    low_pass_filter_t* lpf = lpf_create(44100, 1000, window_type);
+
+    int samples_filtered = 0;
+    enum lpf_error retcode = lpf_filter_file(lpf,
+                                             input_file_name,
+                                             output_file_name,
+                                             cutoff,
+                                             window_type,
+                                             &samples_filtered);
+
+    if (retcode == LPF_NO_ERROR)
+    {
+        printf("--- filtered %d samples! ---", retcode);
+    }
+    else
+        return FILTER_FILE_ERROR;
+    
+    lpf_destroy(lpf);
 
 }
 
@@ -117,12 +132,12 @@ void print_manual_page(const char* prog_name) {
     printf("bartlett.\nThe filtered data is then saved to a new WAVE file ");
     printf("<output_wave_file>.\n\n");
     printf("Valid window types are:\n");
-    printf(" - %s (default)\n", WINDOW_TYPE_BARTLETT);
-    printf(" - %s\n", WINDOW_TYPE_BLACKMAN);
-    printf(" - %s\n", WINDOW_TYPE_HAMMING);
-    printf(" - %s\n", WINDOW_TYPE_HANNING);
-    printf(" - %s\n", WINDOW_TYPE_KAISSER);
-    printf(" - %s\n\n", WINDOW_TYPE_RECTANGULAR);
+    printf(" - kaisser (default)\n");
+    printf(" - blackman\n");
+    printf(" - hamming\n");
+    printf(" - hanning\n");
+    printf(" - bartlett\n");
+    printf(" - rectangular\n\n");
     printf("Running the program without any arguments prints the manual ");
     printf("page.\n\n");
 
@@ -187,14 +202,14 @@ float get_cutoff(const char* cutoff)
     return cutoff_val;
 }
 
-const char* get_window_type(const char* window_type)
+enum window_t get_window_type(const char* window_type)
 {
-    if (!strcmp(window_type, WINDOW_TYPE_KAISSER))          return window_type;
-    else if (!strcmp(window_type, WINDOW_TYPE_HAMMING))     return window_type;
-    else if (!strcmp(window_type, WINDOW_TYPE_HANNING))     return window_type;
-    else if (!strcmp(window_type, WINDOW_TYPE_BLACKMAN))    return window_type;
-    else if (!strcmp(window_type, WINDOW_TYPE_BARTLETT))    return window_type;
-    else if (!strcmp(window_type, WINDOW_TYPE_RECTANGULAR)) return window_type;
+    if      (!strcmp(window_type, "kaisser"))     return KAISSER;
+    else if (!strcmp(window_type, "hamming"))     return HAMMING;
+    else if (!strcmp(window_type, "hanning"))     return HANNING;
+    else if (!strcmp(window_type, "blackman"))    return BLACKMAN;
+    else if (!strcmp(window_type, "bartlett"))    return BARTLETT;
+    else if (!strcmp(window_type, "rectangular")) return RECTANGULAR;
     else
-        return NULL;
+        return NULL_WINDOW;
 }
