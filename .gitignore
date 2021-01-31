@@ -338,3 +338,8 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+/bin-int/Debug-x64/low_pass_filter/low_pass_filter.tlog/CL.command.1.tlog
+/bin-int/Debug-x64/low_pass_filter/low_pass_filter.tlog/CL.read.1.tlog
+*.tlog
+*.recipe
+*.idb
