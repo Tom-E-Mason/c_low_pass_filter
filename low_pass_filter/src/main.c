@@ -1,5 +1,10 @@
 
+#include <stdlib.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
 
 #define WINDOW_TYPE_KAISSER "kaisser"         // ------------
 #define WINDOW_TYPE_HAMMING "hamming"         // 
@@ -7,6 +12,8 @@
 #define WINDOW_TYPE_BLACKMAN "blackman"       // id codes
 #define WINDOW_TYPE_BARTLETT "bartlett"       // 
 #define WINDOW_TYPE_RECTANGULAR "rectangular" // ------------
+
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 enum errors {                 // exit status codes
     NO_ERROR,                 // program runs successfully
@@ -16,15 +23,50 @@ enum errors {                 // exit status codes
     INPUT_FILE_OPEN_ERROR,    // input file doesn't exist
     INPUT_FILE_FORMAT_ERROR,  // .wav extension missing on input file name
     OUTPUT_FILE_FORMAT_ERROR, // .wav extension missing on output file name
-
 };
 
 void print_usage(const char* prog_name);
 void print_manual_page(const char* prog_name);
+bool is_wav_file(const char* file_name);
+float get_cutoff(const char* file_name);
 
 int main(int argc, const char** argv)
 {
-    print_manual_page(argv[0]);
+    if (argc == 1)
+    {
+        print_manual_page(argv[0]);
+        return NO_ERROR;
+    }
+    else if (argc != 4 && argc != 6)
+    {
+        eprintf("invalid arguments\n\n");
+        print_usage(argv[0]);
+        return COMMAND_LINE_ARGS_ERROR;
+    }
+
+    const char* input_file_name = argv[1];
+    if (!is_wav_file(input_file_name))
+    {
+        eprintf("input file %s does not exist\n", input_file_name);
+        return INPUT_FILE_FORMAT_ERROR;
+    }
+
+    const char* output_file_name = argv[2];
+    if (!is_wav_file(output_file_name))
+    {
+        eprintf("output file %s does not exist\n", output_file_name);
+        return OUTPUT_FILE_FORMAT_ERROR;
+    }
+
+    float cutoff = get_cutoff(argv[3]);
+    if (!cutoff)
+    {
+        eprintf("cutoff frequency must be a positive numerical value between 20Hz and 20000Hz.\n");
+        return CUTOFF_VALUE_ERROR;
+    }
+    
+
+
 }
 
 //------------------------------------------------------------------------------
@@ -88,4 +130,42 @@ void print_manual_page(const char* prog_name) {
 
     printf("AUTHOR\n\n");
     printf("Tom Mason | University of Surrey (UG - Music and Media)\n\n");
+}
+
+bool is_wav_file(const char* file_name)
+{
+    if (strlen(file_name) < 4)
+        return false;
+
+    const char* extension = &file_name[strlen(file_name) - 4];
+
+    if (strcmp(extension, ".wav") != 0)
+        return false;
+    else
+        return true;
+}
+
+float get_cutoff(const char* cutoff)
+{
+    if (cutoff[0] == '-')
+        return 0;
+
+    int num_decimal_points = 0;
+    for (int i = 0; i < strlen(cutoff); ++i)
+    {
+        if (!isdigit(cutoff[i]) && cutoff[i] != '.')
+            return 0;
+        else if (cutoff[i] == '.')
+            if (num_decimal_points++ > 0)
+                return 0;
+    }
+
+    float cutoff_val = 0.0f;
+    if (sscanf(cutoff, "%f", &cutoff_val) != 1)
+        return 0;
+
+    if (cutoff_val < 20.0f || cutoff_val > 20000.0f)
+        return 0;
+
+    return cutoff_val;
 }
