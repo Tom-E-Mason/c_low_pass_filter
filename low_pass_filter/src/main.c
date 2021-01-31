@@ -23,12 +23,14 @@ enum errors {                 // exit status codes
     INPUT_FILE_OPEN_ERROR,    // input file doesn't exist
     INPUT_FILE_FORMAT_ERROR,  // .wav extension missing on input file name
     OUTPUT_FILE_FORMAT_ERROR, // .wav extension missing on output file name
+    UNKNOWN_WINDOW_ERROR,
 };
 
 void print_usage(const char* prog_name);
 void print_manual_page(const char* prog_name);
 bool is_wav_file(const char* file_name);
 float get_cutoff(const char* file_name);
+const char* get_window_type(const char* window_type);
 
 int main(int argc, const char** argv)
 {
@@ -65,7 +67,22 @@ int main(int argc, const char** argv)
         return CUTOFF_VALUE_ERROR;
     }
     
+    char* window_type = WINDOW_TYPE_KAISSER;
+    if (argc == 6)
+    {
+        if (strcmp(argv[4], "-w"))
+        {
+            eprintf("unknown command line option %s.\n", argv[4]);
+            return COMMAND_LINE_ARGS_ERROR;
+        }
 
+        window_type = get_window_type(argv[5]);
+        if (!window_type)
+        {
+            eprintf("unknown window type %s.\n", argv[5]);
+            return UNKNOWN_WINDOW_ERROR;
+        }
+    }
 
 }
 
@@ -139,7 +156,7 @@ bool is_wav_file(const char* file_name)
 
     const char* extension = &file_name[strlen(file_name) - 4];
 
-    if (strcmp(extension, ".wav") != 0)
+    if (strcmp(extension, ".wav"))
         return false;
     else
         return true;
@@ -168,4 +185,16 @@ float get_cutoff(const char* cutoff)
         return 0;
 
     return cutoff_val;
+}
+
+const char* get_window_type(const char* window_type)
+{
+    if (!strcmp(window_type, WINDOW_TYPE_KAISSER))          return window_type;
+    else if (!strcmp(window_type, WINDOW_TYPE_HAMMING))     return window_type;
+    else if (!strcmp(window_type, WINDOW_TYPE_HANNING))     return window_type;
+    else if (!strcmp(window_type, WINDOW_TYPE_BLACKMAN))    return window_type;
+    else if (!strcmp(window_type, WINDOW_TYPE_BARTLETT))    return window_type;
+    else if (!strcmp(window_type, WINDOW_TYPE_RECTANGULAR)) return window_type;
+    else
+        return NULL;
 }
