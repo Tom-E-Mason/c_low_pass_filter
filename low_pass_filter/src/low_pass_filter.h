@@ -1,9 +1,9 @@
 
 #pragma once
 
+#include <math.h>
 #include <sndfile.h>
 #include <stdlib.h>
-#include <math.h>
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
@@ -31,8 +31,7 @@ enum lpf_error
     LPF_FILE_WRITE_ERROR,
 };
 
-low_pass_filter_t* lpf_create(enum window_t window_type,
-                              size_t buffer_size);
+low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size);
 
 enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
                                const char* input_file,

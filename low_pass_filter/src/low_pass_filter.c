@@ -29,8 +29,9 @@ int get_read_point(low_pass_filter_t* lpf, int samples_delay);
 void increment_write_point(low_pass_filter_t* lpf);
 
 // -----------------------------------------------------------------------------
-// Allocates memory for a low_pass_filter_t object and the arrays held within
-// it. Returns the address of the new object.
+// Allocates memory for a low_pass_filter_t object and initialises its members.
+// Allocation of coeffs and past_input_samples is left until filter is about to
+// begin. Returns the address of the new object.
 //
 // Arguments:
 //     cutoff      - -6dB point of filter
@@ -40,8 +41,7 @@ void increment_write_point(low_pass_filter_t* lpf);
 // Returns:
 //     pointer to new low_pass_filter_t object
 // -----------------------------------------------------------------------------
-low_pass_filter_t* lpf_create(enum window_t window_type,
-                              size_t buffer_size)
+low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size)
 {
     low_pass_filter_t* lpf =
         (low_pass_filter_t*)malloc(sizeof(low_pass_filter_t));
@@ -51,6 +51,8 @@ low_pass_filter_t* lpf_create(enum window_t window_type,
         lpf->write_point = 0;
         lpf->window_type = window_type;
         lpf->buffer_size = buffer_size;
+        lpf->coeffs = NULL;
+        lpf->past_input_samples = NULL;
     }
 
     return lpf;
@@ -147,10 +149,9 @@ enum lpf_error init_filter(low_pass_filter_t* lpf,
     else if (sample_rate <= 0)
         return LPF_SAMPLE_RATE_ERROR;
 
-    lpf->coeffs =
-            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+    lpf->coeffs = (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
     lpf->past_input_samples =
-            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+        (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
 
     float transition_frequency = cutoff / sample_rate;
 
@@ -161,8 +162,7 @@ enum lpf_error init_filter(low_pass_filter_t* lpf,
         else
         {
             float pi_x = (float)M_PI * (i - lpf->order / 2.0f);
-            lpf->coeffs[i] =
-                sinf(2.0f * transition_frequency * pi_x) / pi_x;
+            lpf->coeffs[i] = sinf(2.0f * transition_frequency * pi_x) / pi_x;
         }
     }
 
