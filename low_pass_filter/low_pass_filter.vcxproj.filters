@@ -21,6 +21,9 @@
     <ClCompile Include="src\low_pass_filter.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\window_functions.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\low_pass_filter.h">

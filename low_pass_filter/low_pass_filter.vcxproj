@@ -181,6 +181,7 @@
   <ItemGroup>
     <ClCompile Include="src\low_pass_filter.c" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\window_functions.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\low_pass_filter.h" />
