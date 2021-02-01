@@ -12,7 +12,7 @@ typedef struct low_pass_filter low_pass_filter_t;
 enum window_t
 {
     NULL_WINDOW,
-    KAISSER,
+    KAISER,
     HAMMING,
     HANNING,
     BLACKMAN,

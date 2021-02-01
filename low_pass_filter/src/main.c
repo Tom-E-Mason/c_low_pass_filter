@@ -62,7 +62,7 @@ int main(int argc, const char** argv)
         return CUTOFF_VALUE_ERROR;
     }
 
-    enum window_t window_type = KAISSER;
+    enum window_t window_type = KAISER;
     if (argc == 6)
     {
         if (strcmp(argv[4], "-w"))
@@ -79,7 +79,7 @@ int main(int argc, const char** argv)
         }
     }
 
-    low_pass_filter_t* lpf = lpf_create(1000, window_type, 512, 1234, 1234);
+    low_pass_filter_t* lpf = lpf_create(1000, window_type, 512);
 
     sf_count_t samples_filtered = 0;
     enum lpf_error retcode = lpf_filter_file(lpf,
@@ -130,7 +130,7 @@ void print_manual_page(const char* prog_name)
     printf("bartlett.\nThe filtered data is then saved to a new WAVE file ");
     printf("<output_wave_file>.\n\n");
     printf("Valid window types are:\n");
-    printf(" - kaisser (default)\n");
+    printf(" - kaiser (default)\n");
     printf(" - blackman\n");
     printf(" - hamming\n");
     printf(" - hanning\n");
@@ -155,7 +155,7 @@ void print_manual_page(const char* prog_name)
     printf("%s input.wav output.wav 1000 -w blackman\n", prog_name);
     printf("%s input.wav output.wav 1000 -w hamming\n", prog_name);
     printf("%s input.wav output.wav 1000 -w hanning\n", prog_name);
-    printf("%s input.wav output.wav 1000 -w kaisser\n", prog_name);
+    printf("%s input.wav output.wav 1000 -w kaiser\n", prog_name);
     printf("%s input.wav output.wav 1000 -w rectangular\n\n", prog_name);
 
     printf("AUTHOR\n\n");
@@ -202,8 +202,8 @@ float get_cutoff(const char* cutoff)
 
 enum window_t get_window_type(const char* window_type)
 {
-    if (!strcmp(window_type, "kaisser"))
-        return KAISSER;
+    if (!strcmp(window_type, "kaiser"))
+        return KAISER;
     else if (!strcmp(window_type, "hamming"))
         return HAMMING;
     else if (!strcmp(window_type, "hanning"))

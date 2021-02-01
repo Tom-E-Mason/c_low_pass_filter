@@ -129,16 +129,20 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
         }
     }
 
-    //bartlett_window(lpf->filter_coeffs, lpf->order + 1);
+    switch (window_type)
+    {
+    case BARTLETT: bartlett_window(lpf->filter_coeffs, lpf->order + 1); break;
+    case BLACKMAN: blackman_window(lpf->filter_coeffs, lpf->order + 1); break;
+    case HAMMING: hamming_window(lpf->filter_coeffs, lpf->order + 1); break;
+    case HANNING: hanning_window(lpf->filter_coeffs, lpf->order + 1); break;
+    case KAISER: kaiser_window(lpf->filter_coeffs, lpf->order + 1); break;
+    }
 
     // normalises coeffiecients to avoid clipping
     float sum = 0.0f;
     for (int i = 0; i < lpf->order + 1; ++i) sum += lpf->filter_coeffs[i];
-    for (int i = 0; i < lpf->order + 1; ++i)
-    {
-        lpf->filter_coeffs[i] /= sum;
-        printf("%f\n", lpf->filter_coeffs[i]);
-    }
+    for (int i = 0; i < lpf->order + 1; ++i) lpf->filter_coeffs[i] /= sum;
+
     return LPF_NO_ERROR;
 }
 
