@@ -9,14 +9,14 @@
 typedef struct low_pass_filter
 {
     int order;
-    float* filter_coeffs;
+    float* coeffs;
     float* past_input_samples;
     int write_point;
     enum window_t window_type;
     size_t buffer_size;
 } low_pass_filter_t;
 
-enum window_t init_coeffs(low_pass_filter_t* lpf,
+enum window_t init_filter(low_pass_filter_t* lpf,
                           float sample_rate,
                           float cutoff,
                           enum window_t window_type);
@@ -40,8 +40,7 @@ void increment_write_point(low_pass_filter_t* lpf);
 // Returns:
 //     pointer to new low_pass_filter_t object
 // -----------------------------------------------------------------------------
-low_pass_filter_t* lpf_create(float cutoff,
-                              enum window_t window_type,
+low_pass_filter_t* lpf_create(enum window_t window_type,
                               size_t buffer_size)
 {
     low_pass_filter_t* lpf =
@@ -49,10 +48,6 @@ low_pass_filter_t* lpf_create(float cutoff,
     if (lpf)
     {
         lpf->order = 126;
-        lpf->filter_coeffs =
-            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
-        lpf->past_input_samples =
-            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
         lpf->write_point = 0;
         lpf->window_type = window_type;
         lpf->buffer_size = buffer_size;
@@ -92,7 +87,7 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     float* audio_buffer = (float*)calloc(lpf->buffer_size, sizeof(float));
 
-    if (init_coeffs(lpf, (float)wav_info.samplerate, cutoff, window_type))
+    if (init_filter(lpf, (float)wav_info.samplerate, cutoff, window_type))
         return LPF_FILTER_INIT_ERROR;
 
     SNDFILE* output_wav = sf_open(output_file_name, SFM_WRITE, &wav_info);
@@ -142,7 +137,7 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 // Returns:
 //     LPF_NO_ERROR on success
 // -----------------------------------------------------------------------------
-enum lpf_error init_coeffs(low_pass_filter_t* lpf,
+enum lpf_error init_filter(low_pass_filter_t* lpf,
                            float sample_rate,
                            float cutoff,
                            enum window_t window_type)
@@ -152,33 +147,38 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
     else if (sample_rate <= 0)
         return LPF_SAMPLE_RATE_ERROR;
 
+    lpf->coeffs =
+            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+    lpf->past_input_samples =
+            (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+
     float transition_frequency = cutoff / sample_rate;
 
     for (int i = 0; i < lpf->order + 1; ++i)
     {
         if (i == lpf->order / 2.0f)
-            lpf->filter_coeffs[i] = 2.0f * transition_frequency;
+            lpf->coeffs[i] = 2.0f * transition_frequency;
         else
         {
             float pi_x = (float)M_PI * (i - lpf->order / 2.0f);
-            lpf->filter_coeffs[i] =
+            lpf->coeffs[i] =
                 sinf(2.0f * transition_frequency * pi_x) / pi_x;
         }
     }
 
     switch (window_type)
     {
-    case BARTLETT: bartlett_window(lpf->filter_coeffs, lpf->order + 1); break;
-    case BLACKMAN: blackman_window(lpf->filter_coeffs, lpf->order + 1); break;
-    case HAMMING: hamming_window(lpf->filter_coeffs, lpf->order + 1); break;
-    case HANNING: hanning_window(lpf->filter_coeffs, lpf->order + 1); break;
-    case KAISER: kaiser_window(lpf->filter_coeffs, lpf->order + 1); break;
+    case BARTLETT: bartlett_window(lpf->coeffs, lpf->order + 1); break;
+    case BLACKMAN: blackman_window(lpf->coeffs, lpf->order + 1); break;
+    case HAMMING: hamming_window(lpf->coeffs, lpf->order + 1); break;
+    case HANNING: hanning_window(lpf->coeffs, lpf->order + 1); break;
+    case KAISER: kaiser_window(lpf->coeffs, lpf->order + 1); break;
     }
 
     // normalises coeffiecients to avoid clipping
     float sum = 0.0f;
-    for (int i = 0; i < lpf->order + 1; ++i) sum += lpf->filter_coeffs[i];
-    for (int i = 0; i < lpf->order + 1; ++i) lpf->filter_coeffs[i] /= sum;
+    for (int i = 0; i < lpf->order + 1; ++i) sum += lpf->coeffs[i];
+    for (int i = 0; i < lpf->order + 1; ++i) lpf->coeffs[i] /= sum;
 
     return LPF_NO_ERROR;
 }
@@ -206,7 +206,7 @@ void filter_buffer(low_pass_filter_t* lpf,
 
         for (int j = 0; j < lpf->order + 1; ++j)
         {
-            audio_buffer[i] += lpf->filter_coeffs[j] *
+            audio_buffer[i] += lpf->coeffs[j] *
                                lpf->past_input_samples[get_read_point(lpf, j)];
         }
 
@@ -263,7 +263,7 @@ void lpf_destroy(low_pass_filter_t* lpf)
 {
     if (lpf)
     {
-        free(lpf->filter_coeffs);
+        free(lpf->coeffs);
         free(lpf->past_input_samples);
         free(lpf);
     }
