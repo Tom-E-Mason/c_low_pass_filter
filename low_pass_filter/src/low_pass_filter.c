@@ -1,6 +1,8 @@
 
 #include "low_pass_filter.h"
 
+#include "window_functions.h"
+
 typedef struct low_pass_filter
 {
     int order;
@@ -127,11 +129,16 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
         }
     }
 
+    //bartlett_window(lpf->filter_coeffs, lpf->order + 1);
+
     // normalises coeffiecients to avoid clipping
     float sum = 0.0f;
     for (int i = 0; i < lpf->order + 1; ++i) sum += lpf->filter_coeffs[i];
-    for (int i = 0; i < lpf->order + 1; ++i) lpf->filter_coeffs[i] /= sum;
-
+    for (int i = 0; i < lpf->order + 1; ++i)
+    {
+        lpf->filter_coeffs[i] /= sum;
+        printf("%f\n", lpf->filter_coeffs[i]);
+    }
     return LPF_NO_ERROR;
 }
 
@@ -158,8 +165,8 @@ void filter_buffer(low_pass_filter_t* lpf,
 int get_read_point(low_pass_filter_t* lpf, int samples_delay)
 {
     int read_point = lpf->write_point + lpf->order + 1 - samples_delay;
-    if (read_point == lpf->order + 1)
-        read_point = 0;
+    if (read_point >= lpf->order + 1)
+        read_point -= lpf->order + 1;
 
     return read_point;
 }

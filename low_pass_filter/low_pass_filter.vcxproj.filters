@@ -26,5 +26,8 @@
     <ClInclude Include="src\low_pass_filter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\window_functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

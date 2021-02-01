@@ -90,11 +90,13 @@ int main(int argc, const char** argv)
                                              &samples_filtered);
 
     if (retcode == LPF_NO_ERROR)
-        printf("--- filtered %lld samples! ---", samples_filtered);
+        printf("--- filtered %lld samples! ---\n", samples_filtered);
     else
         return FILTER_FILE_ERROR;
 
     lpf_destroy(lpf);
+
+    return NO_ERROR;
 }
 
 //------------------------------------------------------------------------------
