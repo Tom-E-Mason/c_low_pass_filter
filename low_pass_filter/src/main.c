@@ -4,19 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #include "low_pass_filter.h"
 
 enum errors
-{                             // exit status codes
-    NO_ERROR,                 // program runs successfully
-    COMMAND_LINE_ARGS_ERROR,  // too many inputs from user
-    CUTOFF_VALUE_ERROR,       // invalid cutoff value
-    FILTER_FILE_ERROR,        // error in filter function
-    INPUT_FILE_OPEN_ERROR,    // input file doesn't exist
-    INPUT_FILE_FORMAT_ERROR,  // .wav extension missing on input file name
-    OUTPUT_FILE_FORMAT_ERROR, // .wav extension missing on output file name
+{
+    NO_ERROR,
+    COMMAND_LINE_ARGS_ERROR,
+    CUTOFF_VALUE_ERROR,
+    FILTER_FILE_ERROR,
+    INPUT_FILE_FORMAT_ERROR,
+    OUTPUT_FILE_FORMAT_ERROR,
     UNKNOWN_WINDOW_ERROR,
 };
 
@@ -28,6 +26,7 @@ enum window_t get_window_type(const char* window_type);
 
 int main(int argc, const char** argv)
 {
+    // user help
     if (argc == 1)
     {
         print_manual_page(argv[0]);
@@ -40,13 +39,13 @@ int main(int argc, const char** argv)
         return COMMAND_LINE_ARGS_ERROR;
     }
 
+    // parses input
     const char* input_file_name = argv[1];
     if (!is_wav_file(input_file_name))
     {
         eprintf("input file %s does not exist\n", input_file_name);
         return INPUT_FILE_FORMAT_ERROR;
     }
-
     const char* output_file_name = argv[2];
     if (!is_wav_file(output_file_name))
     {
@@ -79,7 +78,7 @@ int main(int argc, const char** argv)
         }
     }
 
-    low_pass_filter_t* lpf = lpf_create(1000, window_type, 512);
+    low_pass_filter_t* lpf = lpf_create(cutoff, window_type, 512);
 
     sf_count_t samples_filtered = 0;
     enum lpf_error retcode = lpf_filter_file(lpf,
@@ -99,18 +98,18 @@ int main(int argc, const char** argv)
     return NO_ERROR;
 }
 
-//------------------------------------------------------------------------------
-// prints usage instructions
-//------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Prints usage instructions.
+// -----------------------------------------------------------------------------
 void print_usage(const char* prog_name)
 {
     printf("usage: %s [<input_wave_file> <output_wave_file> ", prog_name);
     printf("<cutoff_frequency> [-w <window_type>]]\n");
 }
 
-//------------------------------------------------------------------------------
-// prints unix style user manual
-//------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Prints unix style user manual.
+// -----------------------------------------------------------------------------
 void print_manual_page(const char* prog_name)
 {
     printf("\n");
@@ -144,7 +143,6 @@ void print_manual_page(const char* prog_name)
     printf(" %d - COMMAND_LINE_ARGS_ERROR\n", COMMAND_LINE_ARGS_ERROR);
     printf(" %d - CUTOFF_VALUE_ERROR\n", CUTOFF_VALUE_ERROR);
     printf(" %d - FILTER_FILE_ERROR\n", FILTER_FILE_ERROR);
-    printf(" %d - INPUT_FILE_OPEN_ERROR\n", INPUT_FILE_OPEN_ERROR);
     printf(" %d - INPUT_FILE_FORMAT_ERROR\n", INPUT_FILE_FORMAT_ERROR);
     printf(" %d - OUTPUT_FILE_FORMAT_ERROR\n\n", OUTPUT_FILE_FORMAT_ERROR);
 
@@ -162,6 +160,15 @@ void print_manual_page(const char* prog_name)
     printf("Tom Mason | University of Surrey (UG - Music and Media)\n\n");
 }
 
+// -----------------------------------------------------------------------------
+// Checks file_name string for .wav extension.
+//
+// Arguments:
+//     file_name - file name string to search
+//
+// Returns:
+//     true on success
+// -----------------------------------------------------------------------------
 bool is_wav_file(const char* file_name)
 {
     if (strlen(file_name) < 4)
@@ -175,6 +182,16 @@ bool is_wav_file(const char* file_name)
         return true;
 }
 
+// -----------------------------------------------------------------------------
+// Converts cutoff string to a float after checking it represents a valid
+// positive number between 20Hz and 20kHz.
+//
+// Arguments:
+//     cutoff - string representing cutoff value
+//
+// Returns:
+//     cutoff value as a float
+// -----------------------------------------------------------------------------
 float get_cutoff(const char* cutoff)
 {
     if (cutoff[0] == '-')
@@ -200,6 +217,16 @@ float get_cutoff(const char* cutoff)
     return cutoff_val;
 }
 
+// -----------------------------------------------------------------------------
+// Checks window_type against supported window types and returns the appropriate
+// enum value.
+//
+// Arguments:
+//     window_type - name of window type as a string
+//
+// Returns:
+//     enum representing selected window
+// -----------------------------------------------------------------------------
 enum window_t get_window_type(const char* window_type)
 {
     if (!strcmp(window_type, "kaiser"))

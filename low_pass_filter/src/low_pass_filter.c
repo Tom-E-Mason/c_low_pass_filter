@@ -3,6 +3,9 @@
 
 #include "window_functions.h"
 
+// -----------------------------------------------------------------------------
+// Struct containing data needed to low pass filter a buffer of samples.
+// -----------------------------------------------------------------------------
 typedef struct low_pass_filter
 {
     int order;
@@ -25,6 +28,18 @@ void filter_buffer(low_pass_filter_t* lpf,
 int get_read_point(low_pass_filter_t* lpf, int samples_delay);
 void increment_write_point(low_pass_filter_t* lpf);
 
+// -----------------------------------------------------------------------------
+// Allocates memory for a low_pass_filter_t object and the arrays held within
+// it. Returns the address of the new object.
+//
+// Arguments:
+//     cutoff      - -6dB point of filter
+//     window_type - window to apply to filter coefficients
+//     buffer_size - size of processing block
+//
+// Returns:
+//     pointer to new low_pass_filter_t object
+// -----------------------------------------------------------------------------
 low_pass_filter_t* lpf_create(float cutoff,
                               enum window_t window_type,
                               size_t buffer_size)
@@ -46,6 +61,16 @@ low_pass_filter_t* lpf_create(float cutoff,
     return lpf;
 }
 
+// -----------------------------------------------------------------------------
+// Opens input file and creates an output file to write to. Processes input
+// data by block.
+//
+// Arguments:
+//     lpf - pointer to low pass filter data
+//     input_file_name - input file name
+//     output_file_name - output file name
+//     cutoff - -6dB point of filter
+// -----------------------------------------------------------------------------
 enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
                                const char* input_file_name,
                                const char* output_file_name,
@@ -105,6 +130,18 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
     return LPF_NO_ERROR;
 }
 
+// -----------------------------------------------------------------------------
+// Initialises coefficients.
+//
+// Arguments:
+//     lpf - lpf - pointer to low pass filter data
+//     sample_rate - sample rate
+//     cutoff - -6dB point of filter
+//     window_type - window to apply to filter coefficients
+//
+// Returns:
+//     LPF_NO_ERROR on success
+// -----------------------------------------------------------------------------
 enum lpf_error init_coeffs(low_pass_filter_t* lpf,
                            float sample_rate,
                            float cutoff,
@@ -146,6 +183,17 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
     return LPF_NO_ERROR;
 }
 
+// -----------------------------------------------------------------------------
+// Processes buffer.
+//
+// Arguments:
+//     lpf          - pointer to low pass filter data
+//     audio_buffer - buffer of samples
+//     samples_read - length of buffer
+//
+// Returns:
+//     void
+// -----------------------------------------------------------------------------
 void filter_buffer(low_pass_filter_t* lpf,
                    float* audio_buffer,
                    sf_count_t samples_read)
@@ -166,6 +214,16 @@ void filter_buffer(low_pass_filter_t* lpf,
     }
 }
 
+// -----------------------------------------------------------------------------
+// Gets read point of circular buffer based on a write point and a delay length.
+//
+// Arguments:
+//     lpf           - used for write point and filter length
+//     samples_delay - delay between 0 and filter length
+//
+// Returns:
+//     read point
+// -----------------------------------------------------------------------------
 int get_read_point(low_pass_filter_t* lpf, int samples_delay)
 {
     int read_point = lpf->write_point + lpf->order + 1 - samples_delay;
@@ -175,6 +233,16 @@ int get_read_point(low_pass_filter_t* lpf, int samples_delay)
     return read_point;
 }
 
+// -----------------------------------------------------------------------------
+// Increments write point in low_pass_filter_t object, and wraps it around
+// filter length.
+//
+// Arguments:
+//     lpf - owner of write_point to increment
+//
+// Returns:
+//     void
+// -----------------------------------------------------------------------------
 void increment_write_point(low_pass_filter_t* lpf)
 {
     ++lpf->write_point;
@@ -182,6 +250,15 @@ void increment_write_point(low_pass_filter_t* lpf)
         lpf->write_point = 0;
 }
 
+// -----------------------------------------------------------------------------
+// Deallocates low_pass_filter_t object and its arrays.
+//
+// Arguments:
+//      lpf - low_pass_filter_t to deallocate
+//
+// Returns:
+//     void
+// -----------------------------------------------------------------------------
 void lpf_destroy(low_pass_filter_t* lpf)
 {
     if (lpf)
