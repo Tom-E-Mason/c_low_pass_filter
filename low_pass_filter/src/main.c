@@ -1,16 +1,15 @@
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <stdbool.h>
-#include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #include "low_pass_filter.h"
 
-#define eprintf(...) fprintf(stderr, __VA_ARGS__)
-
-enum errors {                 // exit status codes
+enum errors
+{                             // exit status codes
     NO_ERROR,                 // program runs successfully
     COMMAND_LINE_ARGS_ERROR,  // too many inputs from user
     CUTOFF_VALUE_ERROR,       // invalid cutoff value
@@ -62,7 +61,7 @@ int main(int argc, const char** argv)
                 "20Hz and 20000Hz.\n");
         return CUTOFF_VALUE_ERROR;
     }
-    
+
     enum window_t window_type = KAISSER;
     if (argc == 6)
     {
@@ -80,7 +79,7 @@ int main(int argc, const char** argv)
         }
     }
 
-    low_pass_filter_t* lpf = lpf_create(44100, 1000, window_type);
+    low_pass_filter_t* lpf = lpf_create(44100, 1000, window_type, 512);
 
     int samples_filtered = 0;
     enum lpf_error retcode = lpf_filter_file(lpf,
@@ -91,21 +90,18 @@ int main(int argc, const char** argv)
                                              &samples_filtered);
 
     if (retcode == LPF_NO_ERROR)
-    {
         printf("--- filtered %d samples! ---", retcode);
-    }
     else
         return FILTER_FILE_ERROR;
-    
-    lpf_destroy(lpf);
 
+    lpf_destroy(lpf);
 }
 
 //------------------------------------------------------------------------------
 // prints usage instructions
 //------------------------------------------------------------------------------
-void print_usage(const char* prog_name) {
-
+void print_usage(const char* prog_name)
+{
     printf("usage: %s [<input_wave_file> <output_wave_file> ", prog_name);
     printf("<cutoff_frequency> [-w <window_type>]]\n");
 }
@@ -113,8 +109,8 @@ void print_usage(const char* prog_name) {
 //------------------------------------------------------------------------------
 // prints unix style user manual
 //------------------------------------------------------------------------------
-void print_manual_page(const char* prog_name) {
-
+void print_manual_page(const char* prog_name)
+{
     printf("\n");
     printf("NAME\n\n");
     printf("%s - Low Pass Filter for WAVE files.\n\n", prog_name);
@@ -204,12 +200,18 @@ float get_cutoff(const char* cutoff)
 
 enum window_t get_window_type(const char* window_type)
 {
-    if      (!strcmp(window_type, "kaisser"))     return KAISSER;
-    else if (!strcmp(window_type, "hamming"))     return HAMMING;
-    else if (!strcmp(window_type, "hanning"))     return HANNING;
-    else if (!strcmp(window_type, "blackman"))    return BLACKMAN;
-    else if (!strcmp(window_type, "bartlett"))    return BARTLETT;
-    else if (!strcmp(window_type, "rectangular")) return RECTANGULAR;
+    if (!strcmp(window_type, "kaisser"))
+        return KAISSER;
+    else if (!strcmp(window_type, "hamming"))
+        return HAMMING;
+    else if (!strcmp(window_type, "hanning"))
+        return HANNING;
+    else if (!strcmp(window_type, "blackman"))
+        return BLACKMAN;
+    else if (!strcmp(window_type, "bartlett"))
+        return BARTLETT;
+    else if (!strcmp(window_type, "rectangular"))
+        return RECTANGULAR;
     else
         return NULL_WINDOW;
 }
