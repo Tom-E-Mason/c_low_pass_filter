@@ -79,7 +79,7 @@ int main(int argc, const char** argv)
         }
     }
 
-    low_pass_filter_t* lpf = lpf_create(44100, 1000, window_type, 512);
+    low_pass_filter_t* lpf = lpf_create(1000, window_type, 512, 1234, 1234);
 
     sf_count_t samples_filtered = 0;
     enum lpf_error retcode = lpf_filter_file(lpf,
@@ -90,7 +90,7 @@ int main(int argc, const char** argv)
                                              &samples_filtered);
 
     if (retcode == LPF_NO_ERROR)
-        printf("--- filtered %d samples! ---", retcode);
+        printf("--- filtered %lld samples! ---", samples_filtered);
     else
         return FILTER_FILE_ERROR;
 

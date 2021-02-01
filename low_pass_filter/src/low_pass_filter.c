@@ -16,12 +16,12 @@ enum window_t init_coeffs(low_pass_filter_t* lpf,
                           float cutoff,
                           enum window_t window_type);
 
-enum lpf_error filter_buffer(low_pass_filter_t* lpf,
-                             float* audio_buffer,
-                             sf_count_t samples_read);
+void filter_buffer(low_pass_filter_t* lpf,
+                   float* audio_buffer,
+                   sf_count_t samples_read);
 
 int get_read_point(low_pass_filter_t* lpf, int samples_delay);
-void increment_read_point(low_pass_filter_t* lpf);
+void increment_write_point(low_pass_filter_t* lpf);
 
 low_pass_filter_t* lpf_create(float cutoff,
                               enum window_t window_type,
@@ -45,14 +45,14 @@ low_pass_filter_t* lpf_create(float cutoff,
 }
 
 enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
-                               const char* input_file,
-                               const char* output_file,
+                               const char* input_file_name,
+                               const char* output_file_name,
                                float cutoff,
                                enum window_t window_type,
                                sf_count_t* samples_filtered)
 {
     SF_INFO wav_info;
-    SNDFILE* input_wav = sf_open(input_file, SFM_READ, &wav_info);
+    SNDFILE* input_wav = sf_open(input_file_name, SFM_READ, &wav_info);
 
     if (input_wav == NULL)
     {
@@ -60,13 +60,15 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
         return LPF_FILE_OPEN_ERROR;
     }
 
-    const int buffer_size = 512;
+    sf_count_t samples_to_process = wav_info.frames;
+    sf_count_t samples_processed = 0;
+
     float* audio_buffer = (float*)calloc(lpf->buffer_size, sizeof(float));
 
-    if (init_coeffs(lpf, wav_info.samplerate, cutoff, window_type))
+    if (init_coeffs(lpf, (float)wav_info.samplerate, cutoff, window_type))
         return LPF_FILTER_INIT_ERROR;
 
-    SNDFILE* output_wav = sf_open(output_file, SFM_WRITE, &wav_info);
+    SNDFILE* output_wav = sf_open(output_file_name, SFM_WRITE, &wav_info);
 
     if (output_wav == NULL)
     {
@@ -74,22 +76,15 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
         return LPF_FILE_OPEN_ERROR;
     }
 
-    sf_count_t samples_to_process = wav_info.frames;
-    sf_count_t samples_processed = 0;
-
     while (samples_processed < samples_to_process)
     {
         sf_count_t samples_read =
-            sf_read_float(input_wav, audio_buffer, buffer_size);
+            sf_read_float(input_wav, audio_buffer, lpf->buffer_size);
 
-        if (filter_buffer(lpf, audio_buffer, samples_read))
-        {
-            eprintf("error filtering samples\n");
-            return LPF_FILTER_FILE_ERROR;
-        }
+        filter_buffer(lpf, audio_buffer, samples_read);
 
         sf_count_t samples_written =
-            sf_write_float(output_file, audio_buffer, samples_read);
+            sf_write_float(output_wav, audio_buffer, samples_read);
 
         if (samples_written != samples_read)
         {
@@ -102,8 +97,8 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     *samples_filtered = samples_processed;
 
-    sf_close(input_file);
-    sf_close(output_file);
+    sf_close(input_wav);
+    sf_close(output_wav);
 
     return LPF_NO_ERROR;
 }
@@ -123,12 +118,12 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
     for (int i = 0; i < lpf->order + 1; ++i)
     {
         if (i == lpf->order / 2.0f)
-            lpf->filter_coeffs[i] = 2 * transition_frequency;
+            lpf->filter_coeffs[i] = 2.0f * transition_frequency;
         else
         {
-            float x = i - lpf->order / 2.0;
+            float pi_x = (float)M_PI * (i - lpf->order / 2.0f);
             lpf->filter_coeffs[i] =
-                sin(2 * M_PI * transition_frequency * x) / (M_PI * x);
+                sinf(2.0f * transition_frequency * pi_x) / pi_x;
         }
     }
 
@@ -140,9 +135,9 @@ enum lpf_error init_coeffs(low_pass_filter_t* lpf,
     return LPF_NO_ERROR;
 }
 
-enum lpf_error filter_buffer(low_pass_filter_t* lpf,
-                             float* audio_buffer,
-                             sf_count_t samples_read)
+void filter_buffer(low_pass_filter_t* lpf,
+                   float* audio_buffer,
+                   sf_count_t samples_read)
 {
     for (int i = 0; i < samples_read; ++i)
     {
