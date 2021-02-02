@@ -84,7 +84,7 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
         return LPF_FILE_OPEN_ERROR;
     }
 
-    sf_count_t samples_to_process = wav_info.frames;
+    const sf_count_t samples_to_process = wav_info.frames;
     sf_count_t samples_processed = 0;
 
     float* audio_buffer = (float*)calloc(lpf->buffer_size, sizeof(float));
@@ -102,12 +102,12 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     while (samples_processed < samples_to_process)
     {
-        sf_count_t samples_read =
+        const sf_count_t samples_read =
             sf_read_float(input_wav, audio_buffer, lpf->buffer_size);
 
         filter_buffer(lpf, audio_buffer, samples_read);
 
-        sf_count_t samples_written =
+        const sf_count_t samples_written =
             sf_write_float(output_wav, audio_buffer, samples_read);
 
         if (samples_written != samples_read)
@@ -123,6 +123,9 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     sf_close(input_wav);
     sf_close(output_wav);
+
+    free(lpf->coeffs);
+    free(lpf->past_input_samples);
 
     return LPF_NO_ERROR;
 }
@@ -263,8 +266,6 @@ void lpf_destroy(low_pass_filter_t* lpf)
 {
     if (lpf)
     {
-        free(lpf->coeffs);
-        free(lpf->past_input_samples);
         free(lpf);
     }
 }

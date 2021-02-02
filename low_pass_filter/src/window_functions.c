@@ -3,14 +3,14 @@
 
 void bartlett_window(float* coeffs, int num_coeffs)
 {
-    float order = (float)num_coeffs - 1.0f;
+    const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 1.0f - 2.0f * (fabsf((float)i - order / 2.0f) / order);
 }
 
 void blackman_window(float* coeffs, int num_coeffs)
 {
-    float order = (float)num_coeffs - 1.0f;
+    const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 0.42f - 0.5f * cosf(2 * M_PI * i / order) +
                      0.08f * cosf(4 * M_PI * i / order);
@@ -18,14 +18,14 @@ void blackman_window(float* coeffs, int num_coeffs)
 
 void hamming_window(float* coeffs, int num_coeffs)
 {
-    float order = (float)num_coeffs - 1.0f;
+    const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 0.54f - 0.46f * cosf(2 * M_PI * i / order);
 }
 
 void hanning_window(float* coeffs, int num_coeffs)
 {
-    float order = (float)num_coeffs - 1.0f;
+    const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 0.5f - 0.5f * cosf(2 * M_PI * i / order);
 }
@@ -46,9 +46,9 @@ float bessel_zero(float x)
 
 void kaiser_window(float* coeffs, int num_coeffs)
 {
-    float beta = 2.0f * sqrtf(2.0f * M_PI);
-    float order = (float)num_coeffs - 1.0f;
-    float bessel_z_beta = bessel_zero(beta);
+    const float beta = 2.0f * sqrtf(2.0f * M_PI);
+    const float order = (float)num_coeffs - 1.0f;
+    const float bessel_z_beta = bessel_zero(beta);
 
     for (int i = 0; i < num_coeffs; ++i)
     {
