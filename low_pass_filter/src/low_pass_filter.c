@@ -8,17 +8,18 @@
 // -----------------------------------------------------------------------------
 typedef struct low_pass_filter
 {
+    float cutoff;
     int order;
     float* coeffs;
     float* past_input_samples;
     int write_point;
     enum window_t window_type;
     size_t buffer_size;
+    int channel_count;
 } low_pass_filter_t;
 
 enum window_t init_filter(low_pass_filter_t* lpf,
                           float sample_rate,
-                          float cutoff,
                           enum window_t window_type);
 
 void filter_buffer(low_pass_filter_t* lpf,
@@ -41,18 +42,20 @@ void increment_write_point(low_pass_filter_t* lpf);
 // Returns:
 //     pointer to new low_pass_filter_t object
 // -----------------------------------------------------------------------------
-low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size)
+low_pass_filter_t* lpf_create(float cutoff, enum window_t window_type, size_t buffer_size)
 {
     low_pass_filter_t* lpf =
         (low_pass_filter_t*)malloc(sizeof(low_pass_filter_t));
     if (lpf)
     {
+        lpf->cutoff = cutoff;
         lpf->order = 126;
+        lpf->coeffs = NULL;
+        lpf->past_input_samples = NULL;
         lpf->write_point = 0;
         lpf->window_type = window_type;
         lpf->buffer_size = buffer_size;
-        lpf->coeffs = NULL;
-        lpf->past_input_samples = NULL;
+        lpf->channel_count = 0;
     }
 
     return lpf;
@@ -71,7 +74,6 @@ low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size)
 enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
                                const char* input_file_name,
                                const char* output_file_name,
-                               float cutoff,
                                enum window_t window_type,
                                sf_count_t* samples_filtered)
 {
@@ -89,7 +91,7 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     float* audio_buffer = (float*)calloc(lpf->buffer_size, sizeof(float));
 
-    if (init_filter(lpf, (float)wav_info.samplerate, cutoff, window_type))
+    if (init_filter(lpf, (float)wav_info.samplerate, window_type))
         return LPF_FILTER_INIT_ERROR;
 
     SNDFILE* output_wav = sf_open(output_file_name, SFM_WRITE, &wav_info);
@@ -145,10 +147,9 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 // -----------------------------------------------------------------------------
 enum lpf_error init_filter(low_pass_filter_t* lpf,
                            float sample_rate,
-                           float cutoff,
                            enum window_t window_type)
 {
-    if (cutoff <= 0)
+    if (lpf->cutoff <= 0)
         return LPF_CUTOFF_ERROR;
     else if (sample_rate <= 0)
         return LPF_SAMPLE_RATE_ERROR;
@@ -157,7 +158,7 @@ enum lpf_error init_filter(low_pass_filter_t* lpf,
     lpf->past_input_samples =
         (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
 
-    float transition_frequency = cutoff / sample_rate;
+    float transition_frequency = lpf->cutoff / sample_rate;
 
     for (int i = 0; i < lpf->order + 1; ++i)
     {
