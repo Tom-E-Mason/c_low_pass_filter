@@ -37,6 +37,6 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
                                const char* input_file,
                                const char* output_file,
                                enum window_t window_type,
-                               sf_count_t* samples_filtered);
+                               sf_count_t* frames_filtered);
 
 void lpf_destroy(low_pass_filter_t* lpf);
