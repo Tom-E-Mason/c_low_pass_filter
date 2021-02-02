@@ -126,6 +126,7 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 
     free(lpf->coeffs);
     free(lpf->past_input_samples);
+    free(audio_buffer);
 
     return LPF_NO_ERROR;
 }
