@@ -8,17 +8,19 @@
 // -----------------------------------------------------------------------------
 typedef struct low_pass_filter
 {
+    float cutoff;
     int order;
     float* coeffs;
     float* past_input_samples;
     int write_point;
     enum window_t window_type;
     size_t buffer_size;
+    int channel_count;
 } low_pass_filter_t;
 
 enum window_t init_filter(low_pass_filter_t* lpf,
                           float sample_rate,
-                          float cutoff,
+                          int channels,
                           enum window_t window_type);
 
 void filter_buffer(low_pass_filter_t* lpf,
@@ -41,18 +43,22 @@ void increment_write_point(low_pass_filter_t* lpf);
 // Returns:
 //     pointer to new low_pass_filter_t object
 // -----------------------------------------------------------------------------
-low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size)
+low_pass_filter_t* lpf_create(float cutoff,
+                              enum window_t window_type,
+                              size_t buffer_size)
 {
     low_pass_filter_t* lpf =
         (low_pass_filter_t*)malloc(sizeof(low_pass_filter_t));
     if (lpf)
     {
+        lpf->cutoff = cutoff;
         lpf->order = 126;
+        lpf->coeffs = NULL;
+        lpf->past_input_samples = NULL;
         lpf->write_point = 0;
         lpf->window_type = window_type;
         lpf->buffer_size = buffer_size;
-        lpf->coeffs = NULL;
-        lpf->past_input_samples = NULL;
+        lpf->channel_count = 0;
     }
 
     return lpf;
@@ -71,9 +77,8 @@ low_pass_filter_t* lpf_create(enum window_t window_type, size_t buffer_size)
 enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
                                const char* input_file_name,
                                const char* output_file_name,
-                               float cutoff,
                                enum window_t window_type,
-                               sf_count_t* samples_filtered)
+                               sf_count_t* frames_filtered)
 {
     SF_INFO wav_info;
     SNDFILE* input_wav = sf_open(input_file_name, SFM_READ, &wav_info);
@@ -84,12 +89,17 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
         return LPF_FILE_OPEN_ERROR;
     }
 
-    const sf_count_t samples_to_process = wav_info.frames;
-    sf_count_t samples_processed = 0;
+    const sf_count_t frames_to_process = wav_info.frames;
+    sf_count_t frames_processed = 0;
 
-    float* audio_buffer = (float*)calloc(lpf->buffer_size, sizeof(float));
+    float* audio_buffer =
+        (float*)calloc(lpf->buffer_size * (size_t)wav_info.channels,
+                       sizeof(float));
 
-    if (init_filter(lpf, (float)wav_info.samplerate, cutoff, window_type))
+    if (init_filter(lpf,
+                    (float)wav_info.samplerate,
+                    wav_info.channels,
+                    window_type))
         return LPF_FILTER_INIT_ERROR;
 
     SNDFILE* output_wav = sf_open(output_file_name, SFM_WRITE, &wav_info);
@@ -100,26 +110,26 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
         return LPF_FILE_OPEN_ERROR;
     }
 
-    while (samples_processed < samples_to_process)
+    while (frames_processed < frames_to_process)
     {
-        const sf_count_t samples_read =
-            sf_read_float(input_wav, audio_buffer, lpf->buffer_size);
+        const sf_count_t frames_read =
+            sf_readf_float(input_wav, audio_buffer, lpf->buffer_size);
 
-        filter_buffer(lpf, audio_buffer, samples_read);
+        filter_buffer(lpf, audio_buffer, frames_read);
 
-        const sf_count_t samples_written =
-            sf_write_float(output_wav, audio_buffer, samples_read);
+        const sf_count_t frames_written =
+            sf_writef_float(output_wav, audio_buffer, frames_read);
 
-        if (samples_written != samples_read)
+        if (frames_written != frames_read)
         {
-            eprintf("not all samples were written to the output file\n");
+            eprintf("not all frames were written to the output file\n");
             return LPF_FILE_WRITE_ERROR;
         }
 
-        samples_processed += samples_written;
+        frames_processed += frames_written;
     }
 
-    *samples_filtered = samples_processed;
+    *frames_filtered = frames_processed;
 
     sf_close(input_wav);
     sf_close(output_wav);
@@ -145,19 +155,21 @@ enum lpf_error lpf_filter_file(low_pass_filter_t* lpf,
 // -----------------------------------------------------------------------------
 enum lpf_error init_filter(low_pass_filter_t* lpf,
                            float sample_rate,
-                           float cutoff,
+                           int channels,
                            enum window_t window_type)
 {
-    if (cutoff <= 0)
+    if (lpf->cutoff <= 0)
         return LPF_CUTOFF_ERROR;
     else if (sample_rate <= 0)
         return LPF_SAMPLE_RATE_ERROR;
 
-    lpf->coeffs = (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+    const size_t filter_length = (size_t)lpf->order + 1ull;
+    lpf->coeffs = (float*)calloc(filter_length, sizeof(float));
     lpf->past_input_samples =
-        (float*)calloc(((size_t)lpf->order + 1), sizeof(float));
+        (float*)calloc(filter_length * (size_t)channels, sizeof(float));
+    lpf->channel_count = channels;
 
-    float transition_frequency = cutoff / sample_rate;
+    float transition_frequency = lpf->cutoff / sample_rate;
 
     for (int i = 0; i < lpf->order + 1; ++i)
     {
@@ -172,17 +184,17 @@ enum lpf_error init_filter(low_pass_filter_t* lpf,
 
     switch (window_type)
     {
-    case BARTLETT: bartlett_window(lpf->coeffs, lpf->order + 1); break;
-    case BLACKMAN: blackman_window(lpf->coeffs, lpf->order + 1); break;
-    case HAMMING: hamming_window(lpf->coeffs, lpf->order + 1); break;
-    case HANNING: hanning_window(lpf->coeffs, lpf->order + 1); break;
-    case KAISER: kaiser_window(lpf->coeffs, lpf->order + 1); break;
+    case BARTLETT: bartlett_window(lpf->coeffs, filter_length); break;
+    case BLACKMAN: blackman_window(lpf->coeffs, filter_length); break;
+    case HAMMING: hamming_window(lpf->coeffs, filter_length); break;
+    case HANNING: hanning_window(lpf->coeffs, filter_length); break;
+    case KAISER: kaiser_window(lpf->coeffs, filter_length); break;
     }
 
     // normalises coeffiecients to avoid clipping
     float sum = 0.0f;
-    for (int i = 0; i < lpf->order + 1; ++i) sum += lpf->coeffs[i];
-    for (int i = 0; i < lpf->order + 1; ++i) lpf->coeffs[i] /= sum;
+    for (int i = 0; i < filter_length; ++i) sum += lpf->coeffs[i];
+    for (int i = 0; i < filter_length; ++i) lpf->coeffs[i] /= sum;
 
     return LPF_NO_ERROR;
 }
@@ -200,20 +212,27 @@ enum lpf_error init_filter(low_pass_filter_t* lpf,
 // -----------------------------------------------------------------------------
 void filter_buffer(low_pass_filter_t* lpf,
                    float* audio_buffer,
-                   sf_count_t samples_read)
+                   sf_count_t frames_read)
 {
-    for (int i = 0; i < samples_read; ++i)
+    for (int i = 0; i < frames_read; ++i)
     {
-        lpf->past_input_samples[lpf->write_point] = audio_buffer[i];
-
-        audio_buffer[i] = 0.0f;
-
-        for (int j = 0; j < lpf->order + 1; ++j)
+        // Channels in a frame are interleaved - indexing from the first will
+        // find the rest.
+        for (int c = 0; c < lpf->channel_count; ++c)
         {
-            audio_buffer[i] += lpf->coeffs[j] *
-                               lpf->past_input_samples[get_read_point(lpf, j)];
-        }
+            lpf->past_input_samples[lpf->write_point * lpf->channel_count + c] =
+                audio_buffer[i * lpf->channel_count + c];
 
+            audio_buffer[i * lpf->channel_count + c] = 0.0f;
+
+            for (int j = 0; j < lpf->order + 1; ++j)
+            {
+                audio_buffer[i * lpf->channel_count + c] +=
+                    lpf->coeffs[j] * lpf->past_input_samples[get_read_point(
+                                         lpf,
+                                         j * lpf->channel_count - c)];
+            }
+        }
         increment_write_point(lpf);
     }
 }
@@ -230,9 +249,11 @@ void filter_buffer(low_pass_filter_t* lpf,
 // -----------------------------------------------------------------------------
 int get_read_point(low_pass_filter_t* lpf, int samples_delay)
 {
-    int read_point = lpf->write_point + lpf->order + 1 - samples_delay;
-    if (read_point >= lpf->order + 1)
-        read_point -= lpf->order + 1;
+    int wrap = (lpf->order + 1) * lpf->channel_count;
+    int read_point =
+        lpf->write_point * lpf->channel_count + wrap - samples_delay;
+    if (read_point >= wrap)
+        read_point -= wrap;
 
     return read_point;
 }
@@ -266,7 +287,5 @@ void increment_write_point(low_pass_filter_t* lpf)
 void lpf_destroy(low_pass_filter_t* lpf)
 {
     if (lpf)
-    {
         free(lpf);
-    }
 }

@@ -78,18 +78,17 @@ int main(int argc, const char** argv)
         }
     }
 
-    low_pass_filter_t* lpf = lpf_create(window_type, 512);
+    low_pass_filter_t* lpf = lpf_create(cutoff, window_type, 512);
 
-    sf_count_t samples_filtered = 0;
+    sf_count_t frames_filtered = 0;
     enum lpf_error retcode = lpf_filter_file(lpf,
                                              input_file_name,
                                              output_file_name,
-                                             cutoff,
                                              window_type,
-                                             &samples_filtered);
+                                             &frames_filtered);
 
     if (retcode == LPF_NO_ERROR)
-        printf("--- filtered %lld samples! ---\n", samples_filtered);
+        printf("--- filtered %lld frames! ---\n", frames_filtered);
     else
         return FILTER_FILE_ERROR;
 

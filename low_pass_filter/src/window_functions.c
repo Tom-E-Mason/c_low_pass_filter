@@ -1,14 +1,14 @@
 
 #include "window_functions.h"
 
-void bartlett_window(float* coeffs, int num_coeffs)
+void bartlett_window(float* coeffs, size_t num_coeffs)
 {
     const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 1.0f - 2.0f * (fabsf((float)i - order / 2.0f) / order);
 }
 
-void blackman_window(float* coeffs, int num_coeffs)
+void blackman_window(float* coeffs, size_t num_coeffs)
 {
     const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
@@ -16,14 +16,14 @@ void blackman_window(float* coeffs, int num_coeffs)
                      0.08f * cosf(4 * M_PI * i / order);
 }
 
-void hamming_window(float* coeffs, int num_coeffs)
+void hamming_window(float* coeffs, size_t num_coeffs)
 {
     const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
         coeffs[i] *= 0.54f - 0.46f * cosf(2 * M_PI * i / order);
 }
 
-void hanning_window(float* coeffs, int num_coeffs)
+void hanning_window(float* coeffs, size_t num_coeffs)
 {
     const float order = (float)num_coeffs - 1.0f;
     for (int i = 0; i < num_coeffs; ++i)
@@ -44,7 +44,7 @@ float bessel_zero(float x)
     return bessel_z;
 }
 
-void kaiser_window(float* coeffs, int num_coeffs)
+void kaiser_window(float* coeffs, size_t num_coeffs)
 {
     const float beta = 2.0f * sqrtf(2.0f * M_PI);
     const float order = (float)num_coeffs - 1.0f;
