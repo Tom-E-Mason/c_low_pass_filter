@@ -220,7 +220,7 @@ void filter_buffer(low_pass_filter_t* lpf,
         // find the rest.
         for (int c = 0; c < lpf->channel_count; ++c)
         {
-            lpf->past_input_samples[lpf->write_point+ c] =
+            lpf->past_input_samples[lpf->write_point + c] =
                 audio_buffer[i * lpf->channel_count + c];
 
             audio_buffer[i * lpf->channel_count + c] = 0.0f;
@@ -251,8 +251,7 @@ void filter_buffer(low_pass_filter_t* lpf,
 int calc_read_point(low_pass_filter_t* lpf, int samples_delay)
 {
     int wrap = (lpf->order + 1) * lpf->channel_count;
-    int read_point =
-        lpf->write_point + wrap - samples_delay;
+    int read_point = lpf->write_point + wrap - samples_delay;
     if (read_point >= wrap)
         read_point -= wrap;
 

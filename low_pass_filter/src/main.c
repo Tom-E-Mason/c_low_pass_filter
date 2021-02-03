@@ -156,7 +156,7 @@ void print_manual_page(const char* prog_name)
     printf("%s input.wav output.wav 1000 -w rectangular\n\n", prog_name);
 
     printf("AUTHOR\n\n");
-    printf("Tom Mason | University of Surrey (UG - Music and Media)\n\n");
+    printf("Tom Mason\n\n");
 }
 
 // -----------------------------------------------------------------------------
