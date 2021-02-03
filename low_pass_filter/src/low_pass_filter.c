@@ -238,7 +238,8 @@ void filter_buffer(low_pass_filter_t* lpf,
 }
 
 // -----------------------------------------------------------------------------
-// Gets read point of circular buffer based on a write point and a delay length.
+// Calculates the read point of circular buffer based on a write point and a
+// delay length.
 //
 // Arguments:
 //     lpf           - used for write point and filter length
