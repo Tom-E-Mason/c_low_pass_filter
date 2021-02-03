@@ -27,7 +27,7 @@ void filter_buffer(low_pass_filter_t* lpf,
                    float* audio_buffer,
                    sf_count_t samples_read);
 
-int get_read_point(low_pass_filter_t* lpf, int samples_delay);
+int calc_read_point(low_pass_filter_t* lpf, int samples_delay);
 void increment_write_point(low_pass_filter_t* lpf);
 
 // -----------------------------------------------------------------------------
@@ -220,7 +220,7 @@ void filter_buffer(low_pass_filter_t* lpf,
         // find the rest.
         for (int c = 0; c < lpf->channel_count; ++c)
         {
-            lpf->past_input_samples[lpf->write_point * lpf->channel_count + c] =
+            lpf->past_input_samples[lpf->write_point+ c] =
                 audio_buffer[i * lpf->channel_count + c];
 
             audio_buffer[i * lpf->channel_count + c] = 0.0f;
@@ -228,7 +228,7 @@ void filter_buffer(low_pass_filter_t* lpf,
             for (int j = 0; j < lpf->order + 1; ++j)
             {
                 audio_buffer[i * lpf->channel_count + c] +=
-                    lpf->coeffs[j] * lpf->past_input_samples[get_read_point(
+                    lpf->coeffs[j] * lpf->past_input_samples[calc_read_point(
                                          lpf,
                                          j * lpf->channel_count - c)];
             }
@@ -247,11 +247,11 @@ void filter_buffer(low_pass_filter_t* lpf,
 // Returns:
 //     read point
 // -----------------------------------------------------------------------------
-int get_read_point(low_pass_filter_t* lpf, int samples_delay)
+int calc_read_point(low_pass_filter_t* lpf, int samples_delay)
 {
     int wrap = (lpf->order + 1) * lpf->channel_count;
     int read_point =
-        lpf->write_point * lpf->channel_count + wrap - samples_delay;
+        lpf->write_point + wrap - samples_delay;
     if (read_point >= wrap)
         read_point -= wrap;
 
@@ -270,8 +270,8 @@ int get_read_point(low_pass_filter_t* lpf, int samples_delay)
 // -----------------------------------------------------------------------------
 void increment_write_point(low_pass_filter_t* lpf)
 {
-    ++lpf->write_point;
-    if (lpf->write_point == lpf->order + 1)
+    lpf->write_point += lpf->channel_count;
+    if (lpf->write_point == (lpf->order + 1) * lpf->channel_count)
         lpf->write_point = 0;
 }
 
